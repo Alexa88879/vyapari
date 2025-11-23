@@ -188,6 +188,19 @@ export default function BarcodeScanner({ onScan, onClose, isOpen, isScanning: is
 
   return (
     <div ref={containerRef} className="w-full space-y-3">
+      {/* Inline styles to ensure video fills container properly */}
+      <style>{`
+        #barcode-scanner-reader video {
+          width: 100% !important;
+          height: 100% !important;
+          object-fit: cover !important;
+        }
+        #barcode-scanner-reader {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+      `}</style>
       {/* Scanner Status - Compact Header */}
       <div className="bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg p-3 text-white">
         <div className="flex items-center justify-between">
@@ -210,9 +223,9 @@ export default function BarcodeScanner({ onScan, onClose, isOpen, isScanning: is
       </div>
 
       {/* Camera Preview Area - Always Rendered */}
-      <div className="relative rounded-lg overflow-hidden shadow-md border border-indigo-200 bg-black h-full min-h-[250px]">
+      <div className="relative rounded-lg overflow-hidden shadow-md border border-indigo-200 bg-black aspect-[4/3]">
         {/* The actual scanner element - MUST BE PRESENT for library to attach */}
-        <div id="barcode-scanner-reader" className="w-full h-full min-h-[250px] overflow-hidden"></div>
+        <div id="barcode-scanner-reader" className="w-full h-full"></div>
 
         {/* Overlays based on state */}
         {scannerState === 'INITIALIZING' && (
