@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is accessing their own data
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users collection: Users can only read/write their own document
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Stores collection: Users can only read/write their own store
+    // Assuming storeId is the same as userId for this single-owner model
+    match /stores/{storeId} {
+      allow read, write: if isOwner(storeId);
+
+      // Inventory subcollection
+      match /inventory/{itemId} {
+        allow read, write: if isOwner(storeId);
+      }
+
+      // Transactions subcollection (immutable after creation)
+      match /transactions/{transactionId} {
+        allow read: if isOwner(storeId);
+        allow create: if isOwner(storeId) 
+                      && request.resource.data.timestamp == request.time
+                      && request.resource.data.type in ['SALE', 'RETURN'];
+        allow update, delete: if false; // Transactions are immutable
+      }
+
+      // Forecasts subcollection (immutable after creation)
+      match /forecasts/{forecastId} {
+        allow read, create: if isOwner(storeId);
+        allow delete: if isOwner(storeId);
+        allow update: if false; // Forecasts are immutable
+      }
+
+      // Barcodes cache subcollection
+      match /barcodes/{barcode} {
+        allow read, write: if isOwner(storeId);
+      }
+
+      // Telegram subcollection (for alert subscriptions)
+      match /telegram/{document=**} {
+        allow read, write: if isOwner(storeId);
+      }
+
+      // Allow access to any other subcollections
+      match /{document=**} {
+        allow read, write: if isOwner(storeId);
+      }
+    }
+  }
+}
