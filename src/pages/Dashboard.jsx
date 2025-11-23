@@ -6,11 +6,12 @@ import { Button } from "../components/ui/Button";
 import { ScanLine, Plus, TrendingUp, Package, Loader2, Bell, CheckCircle, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { db } from "../lib/firebase";
-import { collection, getDocs, query, where, Timestamp, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp, onSnapshot, doc, getDoc } from "firebase/firestore";
 
 export default function Dashboard() {
     const { currentUser } = useAuth();
     const [loading, setLoading] = useState(true);
+    const [userName, setUserName] = useState(currentUser?.displayName || "Shopkeeper");
     const [stats, setStats] = useState({
         totalItems: 0,
         totalStock: 0,
@@ -22,6 +23,7 @@ export default function Dashboard() {
     useEffect(() => {
         if (currentUser) {
             fetchDashboardStats();
+            fetchUserName();
             
             // Check Telegram connection status
             const unsubscribeTelegram = onSnapshot(
@@ -34,6 +36,27 @@ export default function Dashboard() {
             return () => unsubscribeTelegram();
         }
     }, [currentUser]);
+
+    const fetchUserName = async () => {
+        if (currentUser?.displayName) {
+            setUserName(currentUser.displayName);
+            return;
+        }
+
+        try {
+            const userDocRef = doc(db, "users", currentUser.uid);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists() && userDoc.data().displayName) {
+                setUserName(userDoc.data().displayName);
+            } else if (currentUser.email) {
+                // Fallback to email username if no display name found
+                const emailName = currentUser.email.split('@')[0];
+                setUserName(emailName.charAt(0).toUpperCase() + emailName.slice(1));
+            }
+        } catch (error) {
+            console.error("Error fetching user name:", error);
+        }
+    };
 
     const fetchDashboardStats = async () => {
         try {
@@ -96,7 +119,7 @@ export default function Dashboard() {
                 {/* Welcome Section */}
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">
-                        Namaste, {currentUser?.displayName || "Shopkeeper"}! 🙏
+                        Namaste, {userName}! 🙏
                     </h1>
                     <p className="text-gray-600 mt-1">Here's what's happening in your shop today.</p>
                 </div>

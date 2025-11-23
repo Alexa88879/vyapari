@@ -45,6 +45,18 @@ export default function Login() {
                     <p className="mt-2 text-center text-sm text-gray-600">
                         Sign in to manage your shop
                     </p>
+                    
+                    <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100 text-sm text-blue-800">
+                        <p className="font-semibold mb-1">Demo Credentials:</p>
+                        <div className="flex justify-between">
+                            <span>Email:</span>
+                            <span className="font-mono">test@gmail.com</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span>Password:</span>
+                            <span className="font-mono">12345678</span>
+                        </div>
+                    </div>
                 </div>
                 {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">{error}</div>}
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

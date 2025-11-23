@@ -57,6 +57,10 @@ exports.telegramWebhook = onRequest(async (req, res) => {
         await handleTest(message);
         break;
       
+      case '/stock':
+        await handleStock(message);
+        break;
+      
       default:
         await handleUnknown(chatId);
         break;
@@ -319,6 +323,81 @@ async function handleTest(message) {
 
 Could not send test alert. Please try again.
 `);
+  }
+}
+
+/**
+ * Handle /stock command
+ * Shows current inventory stock
+ */
+async function handleStock(message) {
+  const chatId = message.chat.id;
+  const userId = message.from.id;
+
+  try {
+    // Find connected store
+    const storesSnapshot = await db.collection('stores').get();
+    let connectedStore = null;
+
+    for (const storeDoc of storesSnapshot.docs) {
+      const subscriberRef = storeDoc.ref
+        .collection('telegram')
+        .doc('subscribers')
+        .collection('users')
+        .doc(userId.toString());
+      
+      const subscriberDoc = await subscriberRef.get();
+      if (subscriberDoc.exists) {
+        connectedStore = { id: storeDoc.id, name: storeDoc.data().name || 'Unnamed Store' };
+        break;
+      }
+    }
+
+    if (!connectedStore) {
+      await sendMessage(chatId, `
+⚠️ *Not Connected*
+
+You're not connected to any store yet.
+Use the /start link from your dashboard to connect.
+`);
+      return;
+    }
+
+    // Fetch inventory
+    const inventorySnapshot = await db.collection('stores').doc(connectedStore.id).collection('inventory').orderBy('name').limit(50).get();
+    
+    if (inventorySnapshot.empty) {
+       await sendMessage(chatId, `
+📦 *Stock Update*
+Store: ${connectedStore.name}
+
+No items in inventory.
+`);
+       return;
+    }
+
+    let messageText = `📦 *Current Stock*\nStore: ${connectedStore.name}\n\n`;
+    
+    inventorySnapshot.docs.forEach(doc => {
+        const item = doc.data();
+        const qty = item.quantity || item.qty || 0;
+        const name = item.name || 'Unknown Item';
+        // Add warning emoji if low stock
+        const status = qty <= 5 ? '⚠️ ' : '';
+        messageText += `${status}*${name}*: ${qty}\n`;
+    });
+
+    // Check if there are more items
+    // (This is a simple check, for exact count we'd need a separate count query or fetch all)
+    if (inventorySnapshot.size === 50) {
+        messageText += `\n_Showing first 50 items..._`;
+    }
+
+    await sendMessage(chatId, messageText);
+
+  } catch (error) {
+    console.error('Error handling /stock command:', error);
+    await sendMessage(chatId, `❌ *Error fetching stock*`);
   }
 }
 
